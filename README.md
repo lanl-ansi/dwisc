@@ -17,8 +17,12 @@ Bash stream redirection can be used to save the standard output to a file, for e
 ```
 ./dwisc.py -f test/data/ran1_1.json > ran1_1_is_1.json
 ```
+A detailed list of all command line options can be viewed via,
+```
+./dwisc.py --help
+```
 
-If you have a collection of sample files in a directory, `combis.py` can be used to quickly combine those files and send the resulting sample data to standard output,
+It is fairly common to combine results from several runs of `dwisc.py`.  If multiple sample files are placed in a directory, `combis.py` can be used to quickly combine those files and send the resulting sample data to standard output,
 ```
 ./combis.py -sd test/result
 ```
