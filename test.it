@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# python tests are not yet possible without mock or a connection to a d-wave machine
+
+time ./dwisc.py -f ./test/data/ran1_1.json > /dev/null 
+time ./dwisc.py -f ./test/data/ran1_1.json -srtr 200 > /dev/null 
+
+time ./dwisc.py -f ./test/data/ran1_1.json > /dev/null 
+
+time ./dwisc.py -f ./test/data/ran1_2.json > /dev/null 
+
+time ./dwisc.py -f ./test/data/ranf1_1.json > /dev/null 
+
+time ./dwisc.py -f ./test/data/const_1.json > /dev/null 
+time ./dwisc.py -f ./test/data/const_2.json > /dev/null 
+time ./dwisc.py -f ./test/data/const_3.json > /dev/null 
+time ./dwisc.py -f ./test/data/const_4.json > /dev/null 

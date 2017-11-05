@@ -1,4 +1,6 @@
-rm data/*.json
+#!/bin/bash
+
+#rm data/*.json
 
 ../../dwig/dwig.py -pp -cd  2 -tl -rs 0 -os ran > data/ran1_1.json
 ../../dwig/dwig.py -pp -cd 12 -tl -rs 0 -os ran > data/ran1_2.json
