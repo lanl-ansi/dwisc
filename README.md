@@ -75,7 +75,7 @@ The solution file output by D-WISC is a JSON document with has the following str
   ]
 }
 ```
-The `metadata` and `solve_ising_args` are optional, all other fields are required.
+The `metadata` and `solve_ising_args` fields are optional, all other fields are required.
 
 ## License
 D-WISC is provided under a BSD-ish license with a "modifications must be indicated" clause.  See the `LICENSE.md` file for the full text.
