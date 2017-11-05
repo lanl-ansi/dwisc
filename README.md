@@ -54,6 +54,28 @@ The configuration file is a json document that can be use to set default values 
 
 If no connection details are provided, D-WISC will attempt use any connection details provided in the bqpjson file.  
 
+### Solution JSON File
+
+The solution file output by D-WISC is a JSON document with has the following structure,
+```
+{
+  "collection_start": "<UTC start time of sample collection>",
+  "collection_end": "<UTC end time of sample collection>",
+  "metadata": {<QPU identification data>},
+  "solve_ising_args": {<arguments passed to solve_ising>},
+  "timing": {<QPU timing information>}
+  "variable_ids": [<an ordered list of QPU variable ids>],
+  "solutions":[
+    {
+      "solution":[<variable assignments of -1 and 1>],
+      "num_occurrences":<int>,
+      "energy":<float>
+    },
+    ...
+  ]
+}
+```
+The `metadata` and `solve_ising_args` are optional, all other fields are required.
 
 ## License
 D-WISC is provided under a BSD-ish license with a "modifications must be indicated" clause.  See the `LICENSE.md` file for the full text.
