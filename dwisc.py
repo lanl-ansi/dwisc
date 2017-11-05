@@ -160,7 +160,6 @@ def main(args):
     combis.merge_solution_counts(solutions_all)
 
     print_err('')
-    #print(solutions_all)
     total_collected = sum(solution['num_occurrences'] for solution in solutions_all['solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions_all['solutions']):

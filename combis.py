@@ -1,6 +1,8 @@
+#!/usr/bin/env python
+
 # combines ising samples
 
-import sys, json
+import sys, os, argparse, json, datetime
 
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
@@ -25,12 +27,47 @@ def main(args):
     #     with open(args.input_file) as file:
     #         data = json.load(file)
 
+    file_locations = []
+    for dir_name, subdir_list, file_list in os.walk(args.sample_directory):
+        for file_name in file_list:
+            if file_name.endswith('.json'):
+                file_locations.append(os.path.join(dir_name, file_name))
+
+
+    solutions = None
+
+    for file_loc in file_locations:
+        print_err('loading: {}'.format(file_loc))
+        with open(file_loc) as file:
+            data = json.load(file)
+        
+        #TODO check that data is a "solutions" json file
+        
+        data['collection_start'] = datetime.datetime.strptime(data['collection_start'], TIME_FORMAT)
+        data['collection_end'] = datetime.datetime.strptime(data['collection_end'], TIME_FORMAT)
+
+        if solutions != None:
+            combine_solution_data(solutions, data)
+        else:
+            solutions = data
+
+    merge_solution_counts(solutions)
     #bqpjson.validate(data)
 
     print_err('')
-    solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
-    solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
-    print(json.dumps(solutions_all))
+    total_collected = sum(solution['num_occurrences'] for solution in solutions['solutions'])
+    print_err('total collected: {}'.format(total_collected))
+    for i, solution in enumerate(solutions['solutions']):
+        print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
+        if i >= 50:
+            print_err('  first 50 of {} solutions'.format(len(solutions['solutions'])))
+            break
+
+    print_err('')
+    solutions['collection_start'] = solutions['collection_start'].strftime(TIME_FORMAT)
+    solutions['collection_end'] = solutions['collection_end'].strftime(TIME_FORMAT)
+    print(json.dumps(solutions))
+
 
 def combine_solution_data(solutions_all, solutions):
     # check data compatablity
@@ -95,11 +132,11 @@ def merge_solution_counts(solutions):
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
-    #parser.add_argument('-f', '--input-file', help='the data file to operate on (.json)')
+    parser.add_argument('-sd', '--sample-directory', help='a directory of data files to operate on (.json)', required=True)
 
     return parser
 
 
 if __name__ == '__main__':
     parser = build_cli_parser()
-    main(load_config(parser.parse_args()))
+    main(parser.parse_args())
