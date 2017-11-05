@@ -10,8 +10,15 @@ from dwave_sapi2.core import async_solve_ising, await_completion
 
 import bqpjson
 
+import combis
+
 DEFAULT_CONFIG_FILE = '_config'
-TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+json_dumps_kwargs = {
+    'sort_keys':True,
+    'indent':2,
+    'separators':(',', ': ')
+}
 
 # prints a line to standard error
 def print_err(data):
@@ -146,11 +153,11 @@ def main(args):
             solution_metadata
         )
         if solutions_all != None:
-            combine_solution_data(solutions_all, solutions)
+            combis.combine_solution_data(solutions_all, solutions)
         else:
             solutions_all = solutions
 
-    merge_solution_counts(solutions_all)
+    combis.merge_solution_counts(solutions_all)
 
     print_err('')
     #print(solutions_all)
@@ -165,9 +172,13 @@ def main(args):
 
     #print('BQP_DATA, %d, %d, %f, %f, %f, %f, %f, %d, %d' % (nodes, edges, scaled_objective, scaled_lower_bound, best_objective, lower_bound, best_runtime, 0, best_nodes))
     print_err('')
-    solutions_all['collection_start'] = solutions_all['collection_start'].strftime(TIME_FORMAT)
-    solutions_all['collection_end'] = solutions_all['collection_end'].strftime(TIME_FORMAT)
-    print(json.dumps(solutions_all))
+    solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
+    solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
+
+    if args.pretty_print:
+        print(json.dumps(solutions_all, **json_dumps_kwargs))
+    else:
+        print(json.dumps(solutions_all))
 
 
 def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
@@ -195,76 +206,6 @@ def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_isin
         solution_data['metadata'] = metadata
 
     return solution_data
-
-
-addative_times = [ 'total_real_time', 'post_processing_overhead_time',
-    'qpu_sampling_time', 'total_post_processing_time', 'qpu_programming_time',
-    'run_time_chip', 'qpu_access_time'
-]
-
-constant_times = [ 'anneal_time_per_run', 'readout_time_per_run',
-    'qpu_readout_time_per_sample', 'qpu_delay_time_per_sample',
-    'qpu_anneal_time_per_sample'
-]
-
-def combine_solution_data(solutions_all, solutions):
-    # check data compatablity
-    assert(len(solutions_all['variable_ids']) == len(solutions['variable_ids']))
-    for i in range(len(solutions_all['variable_ids'])):
-        assert(solutions_all['variable_ids'][i] == solutions['variable_ids'][i])
-
-    for k in addative_times:
-        solutions_all['timing'][k] = solutions_all['timing'][k] + solutions['timing'][k]
-
-    for k in constant_times:
-        if solutions_all['timing'][k] != solutions['timing'][k]:
-            solutions_all['timing'][k] = None
-
-    collection_start = min(solutions_all['collection_start'], solutions['collection_start'])
-    collection_end   = max(solutions_all['collection_end'], solutions['collection_end'])
-
-    solutions_all['collection_start'] = collection_start
-    solutions_all['collection_end'] = collection_end
-
-    if 'solve_ising_args' in solutions_all:
-        if 'solve_ising_args' in solutions:
-            for k,v in solutions_all['solve_ising_args'].items():
-                if v != solutions['solve_ising_args'][k]:
-                    del solutions_all['solve_ising_args'][k]
-        else:
-            del solutions_all['dw_parameters']
-
-    if 'metadata' in solutions_all:
-        if 'metadata' in solutions:
-            for k,v in solutions_all['metadata'].items():
-                if v != solutions['metadata'][k]:
-                    del solutions_all['metadata'][k]
-        else:
-            del solutions_all['metadata']
-
-    for new_solution in solutions['solutions']:
-        solutions_all['solutions'].append(new_solution)
-
-
-def merge_solution_counts(solutions):
-    print_err('')
-    print_err('merge solutions:')
-    print_err('  base solutions: {}'.format(len(solutions['solutions'])))
-
-    solution_lookup = {}
-    for solution in solutions['solutions']:
-        sol = tuple(solution['solution'])
-        if sol in solution_lookup:
-            solution_lookup[sol]['num_occurrences'] += solution['num_occurrences']
-        else:
-            solution_lookup[sol] = solution
-
-    new_solutions = [sol for sol in solution_lookup.values()]
-    max_num_occurrences = max(sol['num_occurrences'] for sol in new_solutions)
-    new_solutions.sort(key=lambda x: x['energy']*max_num_occurrences - x['num_occurrences'])
-
-    solutions['solutions'] = new_solutions
-    print_err('  reduced solutions: {}'.format(len(solutions['solutions'])))
 
 
 # loads a configuration file and sets up undefined CLI arguments
@@ -295,12 +236,14 @@ def load_config(args):
 
     return args
 
-# D-Wave Ising Sample Collector
+
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-f', '--input-file', help='the data file to operate on (.json)')
     #parser.add_argument('-o', '--output-file', help='the data file to operate on (.json)')
+
+    parser.add_argument('-pp', '--pretty-print', help='pretty print json output', action='store_true', default=False)
 
     parser.add_argument('-cf', '--config-file', help='a configuration file for specifying common parameters', default=DEFAULT_CONFIG_FILE)
 
