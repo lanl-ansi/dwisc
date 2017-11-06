@@ -39,7 +39,7 @@ At this time D-WISC cannot work without a QPU connection.  The simplest way to a
     -url <d-wave endpoint url>
     -token <sapi token>
     -solver <solver name>
-    ran
+    ...
 ```
 
 Alternatively, a `_config` file can be placed in the D-WISC directory of the following form,
@@ -63,7 +63,7 @@ The solution file output by D-WISC is a JSON document with has the following str
   "collection_end": "<UTC end time of sample collection>",
   "metadata": {<QPU identification data>},
   "solve_ising_args": {<arguments passed to solve_ising>},
-  "timing": {<QPU timing information>}
+  "timing": {<aggregate QPU timing information>}
   "variable_ids": [<an ordered list of QPU variable ids>],
   "solutions":[
     {
