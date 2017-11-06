@@ -62,6 +62,9 @@ def main(args):
     merge_solution_counts(solutions)
 
     print_err('')
+    print_err('collection_time: {}'.format(str(solutions['collection_end']-solutions['collection_start'])))
+
+    print_err('')
     total_collected = sum(solution['num_occurrences'] for solution in solutions['solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions['solutions']):
