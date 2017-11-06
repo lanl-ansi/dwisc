@@ -21,12 +21,6 @@ def print_err(data):
     sys.stderr.write(str(data)+'\n')
 
 def main(args):
-    # if args.input_file == None:
-    #     data = json.load(sys.stdin)
-    # else:
-    #     with open(args.input_file) as file:
-    #         data = json.load(file)
-
     file_locations = []
     for dir_name, subdir_list, file_list in os.walk(args.sample_directory):
         for file_name in file_list:
