@@ -17,3 +17,5 @@ time ./dwisc.py -f ./test/data/const_3.json > /dev/null
 time ./dwisc.py -f ./test/data/const_4.json > /dev/null 
 
 time ./combis.py -sd test/result
+
+./sample_table.py ./test/result/ran1_1_is_1.json 
