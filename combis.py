@@ -21,12 +21,6 @@ def print_err(data):
     sys.stderr.write(str(data)+'\n')
 
 def main(args):
-    # if args.input_file == None:
-    #     data = json.load(sys.stdin)
-    # else:
-    #     with open(args.input_file) as file:
-    #         data = json.load(file)
-
     file_locations = []
     for dir_name, subdir_list, file_list in os.walk(args.sample_directory):
         for file_name in file_list:
@@ -39,7 +33,11 @@ def main(args):
     for file_loc in file_locations:
         print_err('loading: {}'.format(file_loc))
         with open(file_loc) as file:
-            data = json.load(file)
+            try:
+                data = json.load(file)
+            except:
+                print_err('json parsing error: {}'.format(file_loc))
+                continue
         
         #TODO check that data is a "solutions" json file
         
@@ -51,8 +49,14 @@ def main(args):
         else:
             solutions = data
 
+    if solutions == None:
+        print_err('no results found')
+        return
+
     merge_solution_counts(solutions)
-    #bqpjson.validate(data)
+
+    print_err('')
+    print_err('collection_time: {}'.format(str(solutions['collection_end']-solutions['collection_start'])))
 
     print_err('')
     total_collected = sum(solution['num_occurrences'] for solution in solutions['solutions'])

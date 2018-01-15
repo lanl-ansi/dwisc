@@ -46,7 +46,7 @@ def main(args):
         print_err('A non-zero offset value is not yet supported. Given %s' % data['offset'])
         quit()
 
-    # A core assumption of this solver is that the given B-QP will magically be compatable with the given D-Wave QPU
+    # A core assumption of this solver is that the given bqpjson data will magically be compatable with the given D-Wave QPU
     dw_url = args.dw_url
     dw_tokens = [args.dw_token]
     dw_solver_name = args.dw_solver_name
@@ -89,12 +89,6 @@ def main(args):
         'dw_solver_name': dw_solver_name,
         'dw_chip_id': solvers[0].properties['chip_id'],
     }
-
-    #couplers = solver.properties['couplers']
-    #sites = solver.properties['qubits']
-
-    #site_range = tuple(solver.properties['h_range'])
-    #coupler_range = tuple(solver.properties['j_range'])
 
     h = [0]*(max(data['variable_ids'])+1)
     for lt in data['linear_terms']:
@@ -179,7 +173,6 @@ def main(args):
             break
     assert(total_collected == args.num_reads)
 
-    #print('BQP_DATA, %d, %d, %f, %f, %f, %f, %f, %d, %d' % (nodes, edges, scaled_objective, scaled_lower_bound, best_objective, lower_bound, best_runtime, 0, best_nodes))
     print_err('')
     solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
     solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
