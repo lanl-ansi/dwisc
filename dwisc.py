@@ -48,7 +48,7 @@ def main(args):
 
     # A core assumption of this solver is that the given bqpjson data will magically be compatable with the given D-Wave QPU
     dw_url = args.dw_url
-    dw_token = args.dw_token
+    dw_tokens = [args.dw_token]
     dw_solver_name = args.dw_solver_name
     dw_chip_id = None
 
@@ -64,24 +64,30 @@ def main(args):
         dw_chip_id = data['metadata']['dw_chip_id'].encode('ascii','ignore')
         print_err('found d-wave chip id in data file: %s' % dw_chip_id)
 
-    if dw_url is None or dw_token is None or dw_solver_name is None:
+    if hasattr(args, 'dw_tokens') and args.dw_tokens != None:
+        dw_tokens = args.dw_tokens
+
+    if dw_url is None or dw_tokens[0] is None or dw_solver_name is None:
         print_err('d-wave solver parameters not found')
         quit()
 
-    if args.dw_proxy is None: 
-        remote_connection = RemoteConnection(dw_url, dw_token)
-    else:
-        remote_connection = RemoteConnection(dw_url, dw_token, args.dw_proxy)
+    remote_connections = []
+    for dw_token in dw_tokens:
+        if args.dw_proxy is None: 
+            remote_connections.append(RemoteConnection(dw_url, dw_token))
+        else:
+            remote_connection.append(RemoteConnection(dw_url, dw_token, args.dw_proxy))
 
-    solver = remote_connection.get_solver(dw_solver_name)
+    solvers = [rc.get_solver(dw_solver_name) for rc in remote_connections]
+
     if not dw_chip_id is None:
-        if solver.properties['chip_id'] != dw_chip_id:
-            print_err('WARNING: chip ids do not match.  data: %s  hardware: %s' % (dw_chip_id, solver.properties['chip_id']))
+        if solvers[0].properties['chip_id'] != dw_chip_id:
+            print_err('WARNING: chip ids do not match.  data: %s  hardware: %s' % (dw_chip_id, solvers[0].properties['chip_id']))
 
     solution_metadata = {
         'dw_url': dw_url,
         'dw_solver_name': dw_solver_name,
-        'dw_chip_id': solver.properties['chip_id'],
+        'dw_chip_id': solvers[0].properties['chip_id'],
     }
 
     h = [0]*(max(data['variable_ids'])+1)
@@ -116,17 +122,21 @@ def main(args):
     print_err('starting collection:')
     submitted_problems = []
     num_reads_remaining = args.num_reads
+    problem_index = 0
     while num_reads_remaining > 0:
         num_reads = min(args.solve_num_reads, num_reads_remaining)
         params['num_reads'] = num_reads
 
         print_err('  submit {} of {} remaining'.format(num_reads, num_reads_remaining))
+
+        solver_index = problem_index % len(solvers)
         submitted_problems.append({
-            'problem': async_solve_ising(solver, h, J, **params),
+            'problem': async_solve_ising(solvers[solver_index], h, J, **params),
             'start_time': datetime.datetime.utcnow(),
             'params': {k:v for k,v in params.items()}
             })
         num_reads_remaining -= num_reads
+        problem_index += 1
 
     #answers = solve_ising(solver, h, J, **params)
     print_err('  waiting...')
@@ -209,12 +219,19 @@ def load_config(args):
             try:
                 config_data = json.load(config_file)
                 for key, value in config_data.items():
-                    if isinstance(value, dict) or isinstance(value, list):
+                    if isinstance(value, dict):
                         print_err('invalid value for configuration key "%s", only single values are allowed' % config_file_path)
                         quit()
                     if not hasattr(args, key) or getattr(args, key) == None:
                         if isinstance(value, unicode):
                             value = value.encode('ascii','ignore')
+                        if isinstance(value, list):
+                            new_list = []
+                            for item in value:
+                                if isinstance(item, unicode):
+                                    item = item.encode('ascii','ignore')
+                                new_list.append(item)
+                            value = new_list
                         setattr(args, key, value)
                     else:
                         print_err('skipping the configuration key "%s", it already has a value of %s' % (key, str(getattr(args, key))))
