@@ -76,7 +76,7 @@ def main(args):
         if args.dw_proxy is None: 
             remote_connections.append(RemoteConnection(dw_url, dw_token))
         else:
-            remote_connection.append(RemoteConnection(dw_url, dw_token, args.dw_proxy))
+            remote_connections.append(RemoteConnection(dw_url, dw_token, args.dw_proxy))
 
     solvers = [rc.get_solver(dw_solver_name) for rc in remote_connections]
 
