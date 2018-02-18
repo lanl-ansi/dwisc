@@ -4,15 +4,11 @@ from __future__ import print_function
 
 import os, sys, argparse, json, datetime
 
-from dwave_sapi2.remote import RemoteConnection
-#from dwave_sapi2.core import solve_ising
-from dwave_sapi2.core import async_solve_ising, await_completion
+import dwave_micro_client
 
 import bqpjson
 
 import combis
-
-DEFAULT_CONFIG_FILE = '_config'
 
 json_dumps_kwargs = {
     'sort_keys':True,
@@ -24,6 +20,10 @@ json_dumps_kwargs = {
 def print_err(data):
     sys.stderr.write(str(data)+'\n')
 
+def check_diff(a,b):
+    if a != b:
+        print_err('values differ: {} - {}'.format(a, b))
+        quit()
 
 def main(args):
     if args.input_file == None:
@@ -47,10 +47,39 @@ def main(args):
         quit()
 
     # A core assumption of this solver is that the given bqpjson data will magically be compatable with the given D-Wave QPU
-    dw_url = args.dw_url
-    dw_tokens = [args.dw_token]
-    dw_solver_name = args.dw_solver_name
-    dw_chip_id = None
+
+    dw_url = None
+    dw_tokens = []
+    dw_proxy_url = None
+    dw_solver_name = None
+
+    if args.connection_labels != None:
+        for connection_label in args.connection_labels:
+            url, token, proxy_url, solver_name = dwave_micro_client.load_configuration(connection_label)
+            if dw_url == None:
+                dw_url = url
+            else:
+                check_diff(dw_url, url)
+
+            if dw_proxy_url == None:
+                dw_proxy_url = proxy_url
+            else:
+                check_diff(dw_proxy_url, proxy_url)
+
+            if dw_solver_name == None:
+                dw_solver_name = solver_name
+            else:
+                check_diff(dw_solver_name, solver_name)
+
+            dw_tokens.append(token)
+    else:
+        if args.connection_label != None:
+            url, token, proxy_url, solver_name = dwave_micro_client.load_configuration(args.connection_label)
+        else:
+            url, token, proxy_url, solver_name = dwave_micro_client.load_configuration()
+        dw_url, dw_proxy_url, dw_solver_name = url, proxy_url, solver_name
+        dw_tokens.append(token)
+
 
     if 'dw_url' in data['metadata']:
         dw_url = data['metadata']['dw_url'].encode('ascii','ignore')
@@ -64,21 +93,20 @@ def main(args):
         dw_chip_id = data['metadata']['dw_chip_id'].encode('ascii','ignore')
         print_err('found d-wave chip id in data file: %s' % dw_chip_id)
 
-    if hasattr(args, 'dw_tokens') and args.dw_tokens != None:
-        dw_tokens = args.dw_tokens
 
-    if dw_url is None or dw_tokens[0] is None or dw_solver_name is None:
+    if dw_url is None or len(dw_tokens) <= 0 or dw_solver_name is None:
         print_err('d-wave solver parameters not found')
         quit()
 
-    remote_connections = []
-    for dw_token in dw_tokens:
-        if args.dw_proxy is None: 
-            remote_connections.append(RemoteConnection(dw_url, dw_token))
-        else:
-            remote_connections.append(RemoteConnection(dw_url, dw_token, args.dw_proxy))
 
-    solvers = [rc.get_solver(dw_solver_name) for rc in remote_connections]
+    connections = []
+    for dw_token in dw_tokens:
+        if dw_proxy_url is None:
+            connections.append(dwave_micro_client.Connection(dw_url, dw_token, permissive_ssl=True))
+        else:
+            connections.append(dwave_micro_client.Connection(dw_url, dw_token, dw_proxy_url, permissive_ssl=True))
+
+    solvers = [conn.get_solver(dw_solver_name) for conn in connections]
 
     if not dw_chip_id is None:
         if solvers[0].properties['chip_id'] != dw_chip_id:
@@ -90,11 +118,9 @@ def main(args):
         'dw_chip_id': solvers[0].properties['chip_id'],
     }
 
-    h = [0]*(max(data['variable_ids'])+1)
+    h = {}
     for lt in data['linear_terms']:
-        i = lt['id']
-        assert(i < len(h))
-        h[i] = lt['coeff']
+        h[lt['id']] = lt['coeff']
 
     J = {}
     for qt in data['quadratic_terms']:
@@ -102,6 +128,12 @@ def main(args):
         j = qt['id_head']
         assert(not (i,j) in J)
         J[(i,j)] = qt['coeff']
+
+    print_err('')
+    print_err('check problem:')
+    for solver in solvers:
+        check = solver.check_problem(h, J)
+        print_err('  {} - {}'.format(solver.id, check))
 
     params = {
         'auto_scale': False,
@@ -131,7 +163,7 @@ def main(args):
 
         solver_index = problem_index % len(solvers)
         submitted_problems.append({
-            'problem': async_solve_ising(solvers[solver_index], h, J, **params),
+            'problem': solvers[solver_index].sample_ising(h, J, **params),
             'start_time': datetime.datetime.utcnow(),
             'params': {k:v for k,v in params.items()}
             })
@@ -144,12 +176,11 @@ def main(args):
     solutions_all = None
     for i, submitted_problem in enumerate(submitted_problems):
         problem = submitted_problem['problem']
-        await_completion([problem], 1, float('inf'))
+        problem.wait()
         print_err('  collect {} of {} solves'.format(i+1, len(submitted_problems)))
-        answers = problem.result()
 
         solutions = answers_to_solutions(
-            answers,
+            problem,
             data['variable_ids'],
             submitted_problem['start_time'],
             datetime.datetime.utcnow(),
@@ -183,17 +214,17 @@ def main(args):
         print(json.dumps(solutions_all))
 
 
-def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
+def answers_to_solutions(problem, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
     solutions = []
-    for i, solution in enumerate(answers['solutions']):
+    for i, sample in enumerate(problem.samples):
         solutions.append({
-            'energy': answers['energies'][i],
-            'num_occurrences': answers['num_occurrences'][i],
-            'solution': [solution[i] for i in variable_ids]
+            'energy': problem.energies[i],
+            'num_occurrences': problem.occurrences[i],
+            'solution': [sample[i] for i in variable_ids]
         })
 
     solution_data = {
-        'timing':answers['timing'],
+        'timing':problem.timing,
         'variable_ids':variable_ids,
         'solutions':solutions
     }
@@ -210,56 +241,16 @@ def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_isin
     return solution_data
 
 
-# loads a configuration file and sets up undefined CLI arguments
-def load_config(args):
-    config_file_path = args.config_file
-
-    if os.path.isfile(config_file_path):
-        with open(config_file_path, 'r') as config_file:
-            try:
-                config_data = json.load(config_file)
-                for key, value in config_data.items():
-                    if isinstance(value, dict):
-                        print_err('invalid value for configuration key "%s", only single values are allowed' % config_file_path)
-                        quit()
-                    if not hasattr(args, key) or getattr(args, key) == None:
-                        if isinstance(value, unicode):
-                            value = value.encode('ascii','ignore')
-                        if isinstance(value, list):
-                            new_list = []
-                            for item in value:
-                                if isinstance(item, unicode):
-                                    item = item.encode('ascii','ignore')
-                                new_list.append(item)
-                            value = new_list
-                        setattr(args, key, value)
-                    else:
-                        print_err('skipping the configuration key "%s", it already has a value of %s' % (key, str(getattr(args, key))))
-            except ValueError:
-                print_err('the config file does not appear to be a valid json document: %s' % config_file_path)
-                quit()
-    else:
-        if config_file_path != DEFAULT_CONFIG_FILE:
-            print_err('unable to open conifguration file: %s' % config_file_path)
-            quit()
-
-    return args
-
-
 def build_cli_parser():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('-cl', '--connection-label', help='connection details to load from .dwrc', default=None)
+    parser.add_argument('-cls', '--connection-labels', help='connection details to load from .dwrc', default=None)
 
     parser.add_argument('-f', '--input-file', help='the data file to operate on (.json)')
     #parser.add_argument('-o', '--output-file', help='the data file to operate on (.json)')
 
     parser.add_argument('-pp', '--pretty-print', help='pretty print json output', action='store_true', default=False)
-
-    parser.add_argument('-cf', '--config-file', help='a configuration file for specifying common parameters', default=DEFAULT_CONFIG_FILE)
-
-    parser.add_argument('-url', '--dw-url', help='url of the d-wave machine')
-    parser.add_argument('-token', '--dw-token', help='token for accessing the d-wave machine')
-    parser.add_argument('-proxy', '--dw-proxy', help='proxy for accessing the d-wave machine')
-    parser.add_argument('-solver', '--dw-solver-name', help='d-wave solver to use', type=int)
 
     parser.add_argument('-snr', '--solve-num-reads', help='the number of reads to request in each solve_ising call', type=int, default=10000)
 
@@ -272,4 +263,4 @@ def build_cli_parser():
 
 if __name__ == '__main__':
     parser = build_cli_parser()
-    main(load_config(parser.parse_args()))
+    main(parser.parse_args())
