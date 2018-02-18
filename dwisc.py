@@ -152,7 +152,6 @@ def main(args):
     for k,v in params.items():
         print_err('  {} - {}'.format(k,v))
 
-    return
     print_err('')
     print_err('starting collection:')
     submitted_problems = []
@@ -198,7 +197,7 @@ def main(args):
     combis.merge_solution_counts(solutions_all)
 
     print_err('')
-    total_collected = sum(solution['num_occurrences'] for solution in solutions_all['num_solutions'])
+    total_collected = sum(solution['num_occurrences'] for solution in solutions_all['solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions_all['solutions']):
         print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
@@ -248,7 +247,7 @@ def build_cli_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-cl', '--connection-label', help='connection details to load from .dwrc', default=None)
-    parser.add_argument('-cls', '--connection-labels', help='connection details to load from .dwrc', default=None)
+    parser.add_argument('-cls', '--connection-labels', help='connection details to load from .dwrc', default=None, nargs='*')
 
     parser.add_argument('-f', '--input-file', help='the data file to operate on (.json)')
     #parser.add_argument('-o', '--output-file', help='the data file to operate on (.json)')
