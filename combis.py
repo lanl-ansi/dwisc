@@ -126,8 +126,8 @@ def merge_solution_counts(solutions):
             solution_lookup[sol] = solution
 
     new_solutions = [sol for sol in solution_lookup.values()]
-    max_occurrences = max(sol['num_occurrences'] for sol in new_solutions)
-    new_solutions.sort(key=lambda x: x['energy']*max_occurrences - x['num_occurrences'])
+    max_num_occurrences = max(sol['num_occurrences'] for sol in new_solutions)
+    new_solutions.sort(key=lambda x: x['energy']*max_num_occurrences - x['num_occurrences'])
 
     solutions['solutions'] = new_solutions
     print_err('  reduced solutions: {}'.format(len(solutions['solutions'])))
