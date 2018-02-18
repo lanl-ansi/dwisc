@@ -59,10 +59,10 @@ def main(args):
     print_err('collection_time: {}'.format(str(solutions['collection_end']-solutions['collection_start'])))
 
     print_err('')
-    total_collected = sum(solution['occurrences'] for solution in solutions['solutions'])
+    total_collected = sum(solution['num_occurrences'] for solution in solutions['solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions['solutions']):
-        print_err('  %f - %d' % (solution['energy'], solution['occurrences']))
+        print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
         if i >= 50:
             print_err('  first 50 of {} solutions'.format(len(solutions['solutions'])))
             break
@@ -121,13 +121,13 @@ def merge_solution_counts(solutions):
     for solution in solutions['solutions']:
         sol = tuple(solution['solution'])
         if sol in solution_lookup:
-            solution_lookup[sol]['occurrences'] += solution['occurrences']
+            solution_lookup[sol]['num_occurrences'] += solution['num_occurrences']
         else:
             solution_lookup[sol] = solution
 
     new_solutions = [sol for sol in solution_lookup.values()]
-    max_occurrences = max(sol['occurrences'] for sol in new_solutions)
-    new_solutions.sort(key=lambda x: x['energy']*max_occurrences - x['occurrences'])
+    max_occurrences = max(sol['num_occurrences'] for sol in new_solutions)
+    new_solutions.sort(key=lambda x: x['energy']*max_occurrences - x['num_occurrences'])
 
     solutions['solutions'] = new_solutions
     print_err('  reduced solutions: {}'.format(len(solutions['solutions'])))

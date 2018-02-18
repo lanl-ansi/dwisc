@@ -68,7 +68,7 @@ The solution file output by D-WISC is a JSON document with has the following str
   "solutions":[
     {
       "solution":[<variable assignments of -1 and 1>],
-      "occurrences":<int>,
+      "num_occurrences":<int>,
       "energy":<float>
     },
     ...

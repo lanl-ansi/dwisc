@@ -198,10 +198,10 @@ def main(args):
     combis.merge_solution_counts(solutions_all)
 
     print_err('')
-    total_collected = sum(solution['occurrences'] for solution in solutions_all['solutions'])
+    total_collected = sum(solution['num_occurrences'] for solution in solutions_all['num_solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions_all['solutions']):
-        print_err('  %f - %d' % (solution['energy'], solution['occurrences']))
+        print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
         if i >= 50:
             print_err('  first 50 of {} solutions'.format(len(solutions_all['solutions'])))
             break
@@ -222,7 +222,7 @@ def answers_to_solutions(problem, variable_ids, start_time, end_time, solve_isin
     for i, sample in enumerate(problem.samples):
         solutions.append({
             'energy': problem.energies[i],
-            'occurrences': problem.occurrences[i],
+            'num_occurrences': problem.occurrences[i],
             'solution': [sample[i] for i in variable_ids]
         })
 

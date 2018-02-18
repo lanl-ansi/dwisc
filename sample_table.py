@@ -12,7 +12,7 @@ def main(args):
         data = json.load(file)
 
     for solution_data in data['solutions']:
-        row = [solution_data['occurrences']] + solution_data['solution']
+        row = [solution_data['num_occurrences']] + solution_data['num_solution']
         print(', '.join([str(x) for x in row]))
 
 def build_cli_parser():
