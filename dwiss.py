@@ -104,9 +104,10 @@ def main(args):
         J[(i,j)] = qt['coeff']
 
     params = {
+        'answer_mode': 'raw',
         'auto_scale': False,
         'annealing_time': args.annealing_time,
-        'num_reads': args.solve_num_reads
+        'num_reads': min(args.solve_num_reads, args.num_reads)
     }
 
     if args.spin_reversal_transform_rate != None:
@@ -154,7 +155,8 @@ def main(args):
             submitted_problem['start_time'],
             datetime.datetime.utcnow(),
             submitted_problem['params'],
-            solution_metadata
+            solution_metadata,
+            i
         )
         if solutions_all != None:
             combis.combine_solution_data(solutions_all, solutions)
@@ -183,14 +185,17 @@ def main(args):
         print(json.dumps(solutions_all))
 
 
-def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
+def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None, batch=None):
     solutions = []
     for i, solution in enumerate(answers['solutions']):
-        solutions.append({
+        sol = {
             'energy': answers['energies'][i],
-            'num_occurrences': answers['num_occurrences'][i],
+            'num_occurrences': 1,
             'solution': [solution[i] for i in variable_ids]
-        })
+        }
+        if batch != None:
+            sol['batch'] = batch
+        solutions.append(sol)
 
     solution_data = {
         'timing':answers['timing'],
