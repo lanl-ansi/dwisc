@@ -4,7 +4,8 @@ The D-WISC toolset is used to collect larger numbers of samples, on the order of
 
 The remainder of this documentation assumes that,
 
-1. You have access to a D-Wave QPU and the SAPI binaries
+1. You have access to a D-Wave QPU
+2. You have installed the dwave-cloud-client
 2. You are using a bash terminal
 
 ### Basic Usage
@@ -33,26 +34,8 @@ Again, bash stream redirection can be used to save the standard output to a file
 
 ### Connecting to a QPU
 
-At this time D-WISC cannot work without a QPU connection.  The simplest way to add connection details is via the following command line arguments,
-```
-./dwisc.py 
-    -url <d-wave endpoint url>
-    -token <sapi token>
-    -solver <solver name>
-    ...
-```
+D-WISC uses the `dwave-cloud-client` for connecting to the QPU and will use your `dwave.conf` file for the configuration details.  A specific profile can be selected with the command line argument `--profile <label>`.  If no configuration details are found, D-WISC will produce an error.
 
-Alternatively, a `_config` file can be placed in the D-WISC directory of the following form,
-```
-{
-    "dw_url":"<d-wave endpoint url>",
-    "dw_token":"<sapi token>",
-    "dw_solver_name":"<solver name>"
-}
-```
-The configuration file is a json document that can be use to set default values for all command line parameters.
-
-If no connection details are provided, D-WISC will attempt use any connection details provided in the bqpjson file.  
 
 ### Solution JSON File
 
