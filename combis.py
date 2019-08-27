@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # combines ising samples
 
@@ -94,16 +94,16 @@ def combine_solution_data(solutions_all, solutions):
 
     if 'solve_ising_args' in solutions_all:
         if 'solve_ising_args' in solutions:
-            for k,v in solutions_all['solve_ising_args'].items():
-                if v != solutions['solve_ising_args'][k]:
+            for k,v in solutions['solve_ising_args'].items():
+                if k in solutions_all and v != solutions_all['solve_ising_args'][k]:
                     del solutions_all['solve_ising_args'][k]
         else:
             del solutions_all['dw_parameters']
 
     if 'metadata' in solutions_all:
         if 'metadata' in solutions:
-            for k,v in solutions_all['metadata'].items():
-                if v != solutions['metadata'][k]:
+            for k,v in solutions['metadata'].items():
+                if k in solutions_all and v != solutions_all['metadata'][k]:
                     del solutions_all['metadata'][k]
         else:
             del solutions_all['metadata']
