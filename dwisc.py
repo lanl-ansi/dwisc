@@ -60,7 +60,7 @@ def main(args):
         h = {}
         for lt in data['linear_terms']:
             i = lt['id']
-            assert(i < len(h))
+            assert(not i in h)
             h[i] = lt['coeff']
 
         J = {}
