@@ -1,13 +1,13 @@
 {
   "description": "This is a randomly generated B-QP built by D-WIG (https://github.com/lanl-ansi/dwig) using the const algorithm.  A random number seed of 0 was used.",
-  "id": 1813382118,
+  "id": 1654615998,
   "linear_terms": [],
   "metadata": {
     "chimera_cell_size": 8,
-    "chimera_degree": 12,
-    "dw_chip_id": "W3-2_C16_4428898-04-D3_C11R11-device-cal-data-17-02-27-15:11",
-    "dw_solver_name": "DW2X",
-    "dw_url": "https://localhost:10443/sapi/",
+    "chimera_degree": 16,
+    "dw_chip_id": "DW_2000Q_2_1",
+    "dw_endpoint": "https://cloud.dwavesys.com/sapi",
+    "dw_solver_name": "DW_2000Q_2_1",
     "dwig_generator": "const"
   },
   "offset": 0.0,
@@ -29,7 +29,12 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 96,
+      "id_head": 7,
+      "id_tail": 0
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 128,
       "id_tail": 0
     },
     {
@@ -49,7 +54,12 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 97,
+      "id_head": 7,
+      "id_tail": 1
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 129,
       "id_tail": 1
     },
     {
@@ -69,7 +79,12 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 98,
+      "id_head": 7,
+      "id_tail": 2
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 130,
       "id_tail": 2
     },
     {
@@ -89,7 +104,12 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 99,
+      "id_head": 7,
+      "id_tail": 3
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 131,
       "id_tail": 3
     },
     {
@@ -109,6 +129,11 @@
     },
     {
       "coeff": -1.0,
+      "id_head": 15,
+      "id_tail": 7
+    },
+    {
+      "coeff": -1.0,
       "id_head": 12,
       "id_tail": 8
     },
@@ -129,7 +154,7 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 104,
+      "id_head": 136,
       "id_tail": 8
     },
     {
@@ -154,7 +179,7 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 105,
+      "id_head": 137,
       "id_tail": 9
     },
     {
@@ -179,7 +204,7 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 106,
+      "id_head": 138,
       "id_tail": 10
     },
     {
@@ -204,163 +229,188 @@
     },
     {
       "coeff": -1.0,
-      "id_head": 107,
+      "id_head": 139,
       "id_tail": 11
     },
     {
       "coeff": -1.0,
-      "id_head": 100,
-      "id_tail": 96
+      "id_head": 132,
+      "id_tail": 128
     },
     {
       "coeff": -1.0,
-      "id_head": 101,
-      "id_tail": 96
+      "id_head": 133,
+      "id_tail": 128
     },
     {
       "coeff": -1.0,
-      "id_head": 102,
-      "id_tail": 96
+      "id_head": 134,
+      "id_tail": 128
     },
     {
       "coeff": -1.0,
-      "id_head": 100,
-      "id_tail": 97
+      "id_head": 135,
+      "id_tail": 128
     },
     {
       "coeff": -1.0,
-      "id_head": 101,
-      "id_tail": 97
+      "id_head": 132,
+      "id_tail": 129
     },
     {
       "coeff": -1.0,
-      "id_head": 102,
-      "id_tail": 97
+      "id_head": 133,
+      "id_tail": 129
     },
     {
       "coeff": -1.0,
-      "id_head": 100,
-      "id_tail": 98
+      "id_head": 134,
+      "id_tail": 129
     },
     {
       "coeff": -1.0,
-      "id_head": 101,
-      "id_tail": 98
+      "id_head": 135,
+      "id_tail": 129
     },
     {
       "coeff": -1.0,
-      "id_head": 102,
-      "id_tail": 98
+      "id_head": 132,
+      "id_tail": 130
     },
     {
       "coeff": -1.0,
-      "id_head": 100,
-      "id_tail": 99
+      "id_head": 133,
+      "id_tail": 130
     },
     {
       "coeff": -1.0,
-      "id_head": 101,
-      "id_tail": 99
+      "id_head": 134,
+      "id_tail": 130
     },
     {
       "coeff": -1.0,
-      "id_head": 102,
-      "id_tail": 99
+      "id_head": 135,
+      "id_tail": 130
     },
     {
       "coeff": -1.0,
-      "id_head": 108,
-      "id_tail": 100
+      "id_head": 132,
+      "id_tail": 131
     },
     {
       "coeff": -1.0,
-      "id_head": 109,
-      "id_tail": 101
+      "id_head": 133,
+      "id_tail": 131
     },
     {
       "coeff": -1.0,
-      "id_head": 110,
-      "id_tail": 102
+      "id_head": 134,
+      "id_tail": 131
     },
     {
       "coeff": -1.0,
-      "id_head": 108,
-      "id_tail": 104
+      "id_head": 135,
+      "id_tail": 131
     },
     {
       "coeff": -1.0,
-      "id_head": 109,
-      "id_tail": 104
+      "id_head": 140,
+      "id_tail": 132
     },
     {
       "coeff": -1.0,
-      "id_head": 110,
-      "id_tail": 104
+      "id_head": 141,
+      "id_tail": 133
     },
     {
       "coeff": -1.0,
-      "id_head": 111,
-      "id_tail": 104
+      "id_head": 142,
+      "id_tail": 134
     },
     {
       "coeff": -1.0,
-      "id_head": 108,
-      "id_tail": 105
+      "id_head": 143,
+      "id_tail": 135
     },
     {
       "coeff": -1.0,
-      "id_head": 109,
-      "id_tail": 105
+      "id_head": 140,
+      "id_tail": 136
     },
     {
       "coeff": -1.0,
-      "id_head": 110,
-      "id_tail": 105
+      "id_head": 141,
+      "id_tail": 136
     },
     {
       "coeff": -1.0,
-      "id_head": 111,
-      "id_tail": 105
+      "id_head": 142,
+      "id_tail": 136
     },
     {
       "coeff": -1.0,
-      "id_head": 108,
-      "id_tail": 106
+      "id_head": 143,
+      "id_tail": 136
     },
     {
       "coeff": -1.0,
-      "id_head": 109,
-      "id_tail": 106
+      "id_head": 140,
+      "id_tail": 137
     },
     {
       "coeff": -1.0,
-      "id_head": 110,
-      "id_tail": 106
+      "id_head": 141,
+      "id_tail": 137
     },
     {
       "coeff": -1.0,
-      "id_head": 111,
-      "id_tail": 106
+      "id_head": 142,
+      "id_tail": 137
     },
     {
       "coeff": -1.0,
-      "id_head": 108,
-      "id_tail": 107
+      "id_head": 143,
+      "id_tail": 137
     },
     {
       "coeff": -1.0,
-      "id_head": 109,
-      "id_tail": 107
+      "id_head": 140,
+      "id_tail": 138
     },
     {
       "coeff": -1.0,
-      "id_head": 110,
-      "id_tail": 107
+      "id_head": 141,
+      "id_tail": 138
     },
     {
       "coeff": -1.0,
-      "id_head": 111,
-      "id_tail": 107
+      "id_head": 142,
+      "id_tail": 138
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 143,
+      "id_tail": 138
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 140,
+      "id_tail": 139
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 141,
+      "id_tail": 139
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 142,
+      "id_tail": 139
+    },
+    {
+      "coeff": -1.0,
+      "id_head": 143,
+      "id_tail": 139
     }
   ],
   "scale": 1.0,
@@ -373,6 +423,7 @@
     4,
     5,
     6,
+    7,
     8,
     9,
     10,
@@ -381,21 +432,22 @@
     13,
     14,
     15,
-    96,
-    97,
-    98,
-    99,
-    100,
-    101,
-    102,
-    104,
-    105,
-    106,
-    107,
-    108,
-    109,
-    110,
-    111
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143
   ],
   "version": "1.0.0"
 }
