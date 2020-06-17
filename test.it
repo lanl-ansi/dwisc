@@ -4,8 +4,9 @@
 
 time ./dwisc.py -f ./test/data/ran1_1.json > /dev/null 
 time ./dwisc.py -f ./test/data/ran1_1.json -srtr 200 > /dev/null 
+time ./dwisc.py -f ./test/data/ran1_1.json -asch 0.0,0.0 5.0,0.6 10.0,1.0 > /dev/null 
+time ./dwisc.py -f ./test/data/ran1_1.json -asch 0.0,0.0 5.0,0.6 10.0,1.0 -srtr 1000 > /dev/null 
 
-time ./dwisc.py -f ./test/data/ran1_1.json > /dev/null 
 
 time ./dwisc.py -f ./test/data/ran1_2.json > /dev/null 
 
