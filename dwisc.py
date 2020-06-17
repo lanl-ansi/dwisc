@@ -70,15 +70,21 @@ def main(args):
             assert(not (i,j) in J)
             J[(i,j)] = qt['coeff']
 
+
         params = {
             'auto_scale': args.auto_scale,
-            'annealing_time': args.annealing_time,
             'num_reads': args.solve_num_reads,
             'flux_drift_compensation':args.flux_drift_compensation,
         }
 
         if args.spin_reversal_transform_rate != None:
             params['num_spin_reversal_transforms'] = int(args.solve_num_reads/args.spin_reversal_transform_rate)
+
+        if args.anneal_schedule != None:
+            # would be nice to call this, DWaveSampler.validate_anneal_schedule(anneal_schedule)
+            params['anneal_schedule'] = args.anneal_schedule
+        else:
+            params['annealing_time'] = args.annealing_time
 
         print_err('')
         print_err('total num reads: {}'.format(args.num_reads))
@@ -178,6 +184,14 @@ def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_isin
     return solution_data
 
 
+def schedule_pair(s):
+    try:
+        x, y = map(float, s.split(','))
+        return x, y
+    except:
+        raise argparse.ArgumentTypeError("a schedule pair must be x,y of floats")
+
+
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
@@ -195,6 +209,7 @@ def build_cli_parser():
     parser.add_argument('-as', '--auto-scale', help='have d-wave rescale the problem', action='store_true', default=False)
     parser.add_argument('-srtr', '--spin-reversal-transform-rate', help='the number of reads to take before each spin reversal transform', type=int)
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
+    parser.add_argument('-ans', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
 
     return parser
 
