@@ -73,12 +73,12 @@ def main(args):
 
         params = {
             'auto_scale': args.auto_scale,
-            'num_reads': args.solve_num_reads,
+            'num_reads': args.call_num_reads,
             'flux_drift_compensation':args.flux_drift_compensation,
         }
 
         if args.spin_reversal_transform_rate != None:
-            params['num_spin_reversal_transforms'] = int(args.solve_num_reads/args.spin_reversal_transform_rate)
+            params['num_spin_reversal_transforms'] = int(args.call_num_reads/args.spin_reversal_transform_rate)
 
         if args.anneal_schedule != None:
             # would be nice to call this, DWaveSampler.validate_anneal_schedule(anneal_schedule)
@@ -94,46 +94,60 @@ def main(args):
 
         print_err('')
         print_err('starting collection:')
-        submitted_problems = []
         num_reads_remaining = args.num_reads
-        problem_index = 0
-        while num_reads_remaining > 0:
-            num_reads = min(args.solve_num_reads, num_reads_remaining)
-            params['num_reads'] = num_reads
+        num_reads = min(args.call_num_reads, num_reads_remaining)
 
-            print_err('  submit {} of {} remaining'.format(num_reads, num_reads_remaining))
-
-            submitted_problems.append({
-                'problem': solver.sample_ising(h, J, **params),
-                'start_time': datetime.datetime.utcnow(),
-                'params': {k:v for k,v in params.items()}
-                })
-            num_reads_remaining -= num_reads
-            problem_index += 1
-
-        #answers = solve_ising(solver, h, J, **params)
-        print_err('  waiting...')
+        rounds = int(math.ceil(num_reads_remaining/(args.call_num_reads*args.calls_per_round)))
 
         solutions_all = None
+        iteration = 1
 
-        for i, submitted_problem in enumerate(submitted_problems):
-            problem = submitted_problem['problem']
-            problem.wait()
-            print_err('  collect {} of {} solves'.format(i+1, len(submitted_problems)))
-            answers = problem.result()
+        while num_reads_remaining > 0:
+            print_err('')
+            print_err('  collection round {} of {} (sample_ising calls per round {})'.format(iteration, rounds, args.calls_per_round))
 
-            solutions = answers_to_solutions(
-                answers,
-                data['variable_ids'],
-                submitted_problem['start_time'],
-                datetime.datetime.utcnow(),
-                submitted_problem['params'],
-                solution_metadata
-            )
-            if solutions_all != None:
-                combis.combine_solution_data(solutions_all, solutions)
-            else:
-                solutions_all = solutions
+            submitted_problems = []
+            for i in range(args.calls_per_round):
+                num_reads = min(args.call_num_reads, num_reads_remaining)
+                params['num_reads'] = num_reads
+
+                print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining))
+
+                submitted_problems.append({
+                    'problem': solver.sample_ising(h, J, **params),
+                    'start_time': datetime.datetime.utcnow(),
+                    'params': {k:v for k,v in params.items()}
+                    })
+                num_reads_remaining -= num_reads
+
+                if num_reads_remaining <= 0:
+                    break
+
+            #answers = solve_ising(solver, h, J, **params)
+            print_err('    waiting...')
+
+            for i, submitted_problem in enumerate(submitted_problems):
+                problem = submitted_problem['problem']
+                problem.wait()
+                print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
+                answers = problem.result()
+
+                solutions = answers_to_solutions(
+                    answers,
+                    data['variable_ids'],
+                    submitted_problem['start_time'],
+                    datetime.datetime.utcnow(),
+                    submitted_problem['params'],
+                    solution_metadata
+                )
+                if solutions_all != None:
+                    combis.combine_solution_data(solutions_all, solutions)
+                else:
+                    solutions_all = solutions
+
+            print_err('    round complete')
+
+            iteration += 1
 
     combis.merge_solution_counts(solutions_all)
 
@@ -202,7 +216,8 @@ def build_cli_parser():
 
     parser.add_argument('-pp', '--pretty-print', help='pretty print json output', action='store_true', default=False)
 
-    parser.add_argument('-snr', '--solve-num-reads', help='the number of reads to request in each solve_ising call', type=int, default=10000)
+    parser.add_argument('-cpr', '--calls-per-round', help='the number of async calls to sample_ising per round', type=int, default=10)
+    parser.add_argument('-cnr', '--call-num-reads', help='the number of reads to request in each solve_ising call', type=int, default=10000)
 
     parser.add_argument('-nr', '--num-reads', help='the total number of reads to take', type=int, default=25000)
     parser.add_argument('-at', '--annealing-time', help='the annealing time of each d-wave sample', type=int, default=5)
