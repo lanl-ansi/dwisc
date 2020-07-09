@@ -158,7 +158,7 @@ def main(args):
             except Exception as error:
                 print_err(error)
                 print_err('resubmitting round')
-                #revert to solutions before start of previous round
+                #revert to solutions at start of previous round
                 if solutions_prev is None:
                     solutions_all = None
                 else:
