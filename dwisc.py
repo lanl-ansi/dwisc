@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, os, json, argparse, random, math, datetime
+import sys, os, json, argparse, random, math, datetime, copy
 
 from dwave.cloud import Client
 
@@ -100,54 +100,71 @@ def main(args):
         rounds = int(math.ceil(num_reads_remaining/(args.call_num_reads*args.calls_per_round)))
 
         solutions_all = None
+        solutions_prev = None
         iteration = 1
-
         while num_reads_remaining > 0:
-            print_err('')
-            print_err('  collection round {} of {} (sample_ising calls per round {})'.format(iteration, rounds, args.calls_per_round))
+            try:
+                print_err('')
+                print_err('  collection round {} of {} (sample_ising calls per round {})'.format(iteration, rounds, args.calls_per_round))
 
-            submitted_problems = []
-            for i in range(args.calls_per_round):
-                num_reads = min(args.call_num_reads, num_reads_remaining)
-                params['num_reads'] = num_reads
+                submitted_problems = []
+                num_reads_remaining_prev = num_reads_remaining
+                for i in range(args.calls_per_round):
+                    num_reads = min(args.call_num_reads, num_reads_remaining)
+                    params['num_reads'] = num_reads
 
-                print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining))
+                    print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining))
 
-                submitted_problems.append({
-                    'problem': solver.sample_ising(h, J, **params),
-                    'start_time': datetime.datetime.utcnow(),
-                    'params': {k:v for k,v in params.items()}
-                    })
-                num_reads_remaining -= num_reads
+                    submitted_problems.append({
+                        'problem': solver.sample_ising(h, J, **params),
+                        'start_time': datetime.datetime.utcnow(),
+                        'params': {k:v for k,v in params.items()}
+                        })
+                    num_reads_remaining -= num_reads
 
-                if num_reads_remaining <= 0:
-                    break
+                    if num_reads_remaining <= 0:
+                        break
 
-            #answers = solve_ising(solver, h, J, **params)
-            print_err('    waiting...')
+                #answers = solve_ising(solver, h, J, **params)
+                print_err('    waiting...')
 
-            for i, submitted_problem in enumerate(submitted_problems):
-                problem = submitted_problem['problem']
-                problem.wait()
-                print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
-                answers = problem.result()
+                for i, submitted_problem in enumerate(submitted_problems):
+                    problem = submitted_problem['problem']
+                    if problem.wait(timeout = 300) is False:
+                        raise TimeoutError('timed out after 300 seconds while waiting for response from submitted problem')
 
-                solutions = answers_to_solutions(
-                    answers,
-                    data['variable_ids'],
-                    submitted_problem['start_time'],
-                    datetime.datetime.utcnow(),
-                    submitted_problem['params'],
-                    solution_metadata
-                )
-                if solutions_all != None:
-                    combis.combine_solution_data(solutions_all, solutions)
+
+                    print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
+                    answers = problem.result()
+
+                    solutions = answers_to_solutions(
+                        answers,
+                        data['variable_ids'],
+                        submitted_problem['start_time'],
+                        datetime.datetime.utcnow(),
+                        submitted_problem['params'],
+                        solution_metadata
+                    )
+                    if solutions_all != None:
+                        combis.combine_solution_data(solutions_all, solutions)
+                    else:
+                        solutions_all = solutions
+                #storing previous solutions before execution of next round in case there is an error and the next round needs to be resubmitted
+                solutions_prev = copy.deepcopy(solutions_all)
+
+                print_err('    round complete')
+
+                iteration += 1
+            except Exception as error:
+                print_err(error)
+                print_err('resubmitting round')
+                #revert to solutions before start of previous round
+                if solutions_prev is None:
+                    solutions_all = None
                 else:
-                    solutions_all = solutions
+                    solutions_all = copy.deepcopy(solutions_prev)
+                num_reads_remaining = num_reads_remaining_prev
 
-            print_err('    round complete')
-
-            iteration += 1
 
     combis.merge_solution_counts(solutions_all)
 
