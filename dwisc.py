@@ -101,53 +101,66 @@ def main(args):
 
         solutions_all = None
         iteration = 1
-
+        retries = 0
         while num_reads_remaining > 0:
-            print_err('')
-            print_err('  collection round {} of {} (sample_ising calls per round {})'.format(iteration, rounds, args.calls_per_round))
+            try:
+                print_err('')
+                print_err('  collection round {} of {} (sample_ising calls per round {})'.format(iteration, rounds, args.calls_per_round))
 
-            submitted_problems = []
-            for i in range(args.calls_per_round):
-                num_reads = min(args.call_num_reads, num_reads_remaining)
-                params['num_reads'] = num_reads
+                submitted_problems = []
+                num_submitted_reads = 0 # number of reads submitted in this round
+                for i in range(args.calls_per_round):
+                    num_reads = min(args.call_num_reads, num_reads_remaining)
+                    params['num_reads'] = num_reads
 
-                print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining))
+                    print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining-num_submitted_reads))
 
-                submitted_problems.append({
-                    'problem': solver.sample_ising(h, J, **params),
-                    'start_time': datetime.datetime.utcnow(),
-                    'params': {k:v for k,v in params.items()}
-                    })
-                num_reads_remaining -= num_reads
+                    submitted_problems.append({
+                        'problem': solver.sample_ising(h, J, **params),
+                        'start_time': datetime.datetime.utcnow(),
+                        'params': {k:v for k,v in params.items()}
+                        })
+                    num_submitted_reads += num_reads
+                    if num_reads_remaining - num_submitted_reads <= 0:
+                        break
 
-                if num_reads_remaining <= 0:
-                    break
+                #answers = solve_ising(solver, h, J, **params)
+                print_err('    waiting...')
+                solutions_list = []
+                for i, submitted_problem in enumerate(submitted_problems):
+                    problem = submitted_problem['problem']
+                    if problem.wait(timeout = args.timeout) is False:
+                        raise TimeoutError('    timed out after {} seconds while waiting for response from submitted problem'.format(args.timout))
 
-            #answers = solve_ising(solver, h, J, **params)
-            print_err('    waiting...')
 
-            for i, submitted_problem in enumerate(submitted_problems):
-                problem = submitted_problem['problem']
-                problem.wait()
-                print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
-                answers = problem.result()
+                    print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
+                    answers = problem.result()
 
-                solutions = answers_to_solutions(
-                    answers,
-                    data['variable_ids'],
-                    submitted_problem['start_time'],
-                    datetime.datetime.utcnow(),
-                    submitted_problem['params'],
-                    solution_metadata
-                )
-                if solutions_all != None:
-                    combis.combine_solution_data(solutions_all, solutions)
-                else:
-                    solutions_all = solutions
+                    solutions = answers_to_solutions(
+                        answers,
+                        data['variable_ids'],
+                        submitted_problem['start_time'],
+                        datetime.datetime.utcnow(),
+                        submitted_problem['params'],
+                        solution_metadata
+                    )
+                    solutions_list.append(solutions)
+            except Exception as error:
+                retries += 1
+                print_err(error)
+                print_err('    resubmitting round (retries: {})'.format(retries))
+            else:
+                retries = 0
+                num_reads_remaining -= num_submitted_reads
+                for s in solutions_list:
+                    if solutions_all != None:
+                        combis.combine_solution_data(solutions_all, s)
+                    else:
+                        solutions_all = s
+                print_err('    round complete')
+                #print_err('    num_reads_remaining = {}'.format(num_reads_remaining))
+                iteration += 1
 
-            print_err('    round complete')
-
-            iteration += 1
 
     combis.merge_solution_counts(solutions_all)
 
@@ -225,6 +238,7 @@ def build_cli_parser():
     parser.add_argument('-srtr', '--spin-reversal-transform-rate', help='the number of reads to take before each spin reversal transform', type=int)
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
     parser.add_argument('-asch', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
+    parser.add_argument('-to', '--timeout', help='number of seconds to wait for response from d-wave server before raising timeout exception', type=int, default=300)
 
     return parser
 
