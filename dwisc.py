@@ -110,7 +110,7 @@ def main(args):
                 submitted_problems = []
                 num_submitted_reads = 0 # number of reads submitted in this round
                 for i in range(args.calls_per_round):
-                    num_reads = min(args.call_num_reads, num_reads_remaining)
+                    num_reads = min(args.call_num_reads, num_reads_remaining - num_submitted_reads)
                     params['num_reads'] = num_reads
 
                     print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining-num_submitted_reads))
@@ -130,7 +130,7 @@ def main(args):
                 for i, submitted_problem in enumerate(submitted_problems):
                     problem = submitted_problem['problem']
                     if problem.wait(timeout = args.timeout) is False:
-                        raise TimeoutError('    timed out after {} seconds while waiting for response from submitted problem'.format(args.timout))
+                        raise TimeoutError('    timed out after {} seconds while waiting for response from submitted problem'.format(args.timeout))
 
 
                     print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
@@ -160,7 +160,6 @@ def main(args):
                 print_err('    round complete')
                 #print_err('    num_reads_remaining = {}'.format(num_reads_remaining))
                 iteration += 1
-
 
     combis.merge_solution_counts(solutions_all)
 
