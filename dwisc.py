@@ -44,7 +44,7 @@ def main(args):
     if 'dw_chip_id' in data['metadata']:
         dw_chip_id = data['metadata']['dw_chip_id']
 
-    with Client.from_config(config_file=os.getenv("HOME")+"/dwave.conf", profile=args.profile) as client:
+    with Client.from_config(config_file=os.getenv("HOME")+"/dwave.conf", profile=args.profile, connection_close=True) as client:
         solver = client.get_solver()
 
         if not dw_chip_id is None:
