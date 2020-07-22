@@ -85,6 +85,9 @@ def main(args):
             params['anneal_schedule'] = args.anneal_schedule
         else:
             params['annealing_time'] = args.annealing_time
+    
+        if args.h_gain_schedule != None:
+            params['h_gain_schedule'] = args.h_gain_schedule
 
         print_err('')
         print_err('total num reads: {}'.format(args.num_reads))
@@ -215,6 +218,7 @@ def schedule_pair(s):
         x, y = map(float, s.split(','))
         return x, y
     except:
+        print(x,y)
         raise argparse.ArgumentTypeError("a schedule pair must be x,y of floats")
 
 
@@ -238,6 +242,7 @@ def build_cli_parser():
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
     parser.add_argument('-asch', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
     parser.add_argument('-to', '--timeout', help='number of seconds to wait for response from d-wave server before raising timeout exception', type=int, default=300)
+    parser.add_argument('-hgs', '--h-gain-schedule', help='an array of h gain schedule pairs', nargs='+', type=schedule_pair)
 
     return parser
 
