@@ -218,7 +218,6 @@ def schedule_pair(s):
         x, y = map(float, s.split(','))
         return x, y
     except:
-        print(x,y)
         raise argparse.ArgumentTypeError("a schedule pair must be x,y of floats")
 
 
