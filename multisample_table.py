@@ -16,11 +16,11 @@ def main(args):
         print_err('writing: {}'.format(output_file))
 
         with open(output_file, 'w') as file:
+            file.write('count, ' + ', '.join([str(vid) for vid in solution['variable_ids']]) + '\n')
             for solution_data in solution['solutions']:
                 row = [solution_data['num_occurrences']] + solution_data['solution']
                 #print(', '.join([str(x) for x in row]))
                 file.write(', '.join([str(x) for x in row]) + '\n')
-
 
 def build_cli_parser():
     parser = argparse.ArgumentParser()
