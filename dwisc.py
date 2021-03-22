@@ -44,6 +44,9 @@ def main(args):
     if 'dw_chip_id' in data['metadata']:
         dw_chip_id = data['metadata']['dw_chip_id']
 
+    ccs = calc_connected_components(data)
+    print_err('INFO: found %d connected components' % (len(ccs)))
+
     with Client.from_config(config_file=os.getenv("HOME")+"/dwave.conf", profile=args.profile, connection_close=True) as client:
         solver = client.get_solver()
 
@@ -99,7 +102,7 @@ def main(args):
 
         rounds = int(math.ceil(num_reads_remaining/(args.call_num_reads*args.calls_per_round)))
 
-        solutions_all = None
+        multisolution_all = [None for c in ccs]
         iteration = 1
         retries = 0
         while num_reads_remaining > 0:
@@ -126,25 +129,35 @@ def main(args):
 
                 #answers = solve_ising(solver, h, J, **params)
                 print_err('    waiting...')
-                solutions_list = []
+                multisolution_list = []
                 for i, submitted_problem in enumerate(submitted_problems):
                     problem = submitted_problem['problem']
                     if problem.wait(timeout = args.timeout) is False:
                         raise TimeoutError('    timed out after {} seconds while waiting for response from submitted problem'.format(args.timeout))
 
-
                     print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
                     answers = problem.result()
 
-                    solutions = answers_to_solutions(
+                    # solutions = answers_to_solutions(
+                    #     answers,
+                    #     data['variable_ids'],
+                    #     submitted_problem['start_time'],
+                    #     datetime.datetime.utcnow(),
+                    #     submitted_problem['params'],
+                    #     solution_metadata
+                    # )
+                    # solutions_list.append(solutions)
+
+                    multisolutions = answers_to_multisolutions(
                         answers,
-                        data['variable_ids'],
+                        ccs,
                         submitted_problem['start_time'],
                         datetime.datetime.utcnow(),
                         submitted_problem['params'],
                         solution_metadata
                     )
-                    solutions_list.append(solutions)
+                    multisolution_list.append(multisolutions)
+
             except Exception as error:
                 retries += 1
                 print_err(error)
@@ -152,35 +165,44 @@ def main(args):
             else:
                 retries = 0
                 num_reads_remaining -= num_submitted_reads
-                for s in solutions_list:
-                    if solutions_all != None:
-                        combis.combine_solution_data(solutions_all, s)
-                    else:
-                        solutions_all = s
+
+                for sid, s in enumerate(multisolution_list):
+                    for cid, cc in enumerate(ccs):
+                        if multisolution_all[cid] != None:
+                            #print_err('    combine prob {} comp {}'.format(sid, cid))
+                            combis.combine_solution_data(multisolution_all[cid], s[cid])
+                        else:
+                            #print_err('    int prob {} comp {}'.format(sid, cid))
+                            multisolution_all[cid] = s[cid]
+
+                for cid, cc in enumerate(ccs):
+                    #print_err('    merge comp {}'.format(cid))
+                    combis.merge_solution_counts(multisolution_all[cid])
+
                 print_err('    round complete')
                 #print_err('    num_reads_remaining = {}'.format(num_reads_remaining))
                 iteration += 1
 
-    combis.merge_solution_counts(solutions_all)
 
     print_err('')
-    total_collected = sum(solution['num_occurrences'] for solution in solutions_all['solutions'])
+    total_collected = sum(solution['num_occurrences'] for solution in multisolution_all[1]['solutions'])
     print_err('total collected: {}'.format(total_collected))
-    for i, solution in enumerate(solutions_all['solutions']):
-        print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
-        if i >= 50:
-            print_err('  first 50 of {} solutions'.format(len(solutions_all['solutions'])))
-            break
+    # for i, solution in enumerate(solutions_all['solutions']):
+    #     print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
+    #     if i >= 50:
+    #         print_err('  first 50 of {} solutions'.format(len(solutions_all['solutions'])))
+    #         break
     assert(total_collected == args.num_reads)
 
+    for cid, cc in enumerate(ccs):
+        multisolution_all[cid]['collection_start'] = multisolution_all[cid]['collection_start'].strftime(combis.TIME_FORMAT)
+        multisolution_all[cid]['collection_end'] = multisolution_all[cid]['collection_end'].strftime(combis.TIME_FORMAT)
     print_err('')
-    solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
-    solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
 
     if args.pretty_print:
-        print(json.dumps(solutions_all, **json_dumps_kwargs))
+        print(json.dumps(multisolution_all, **json_dumps_kwargs))
     else:
-        print(json.dumps(solutions_all))
+        print(json.dumps(multisolution_all))
 
 
 def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
@@ -208,6 +230,88 @@ def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_isin
         solution_data['metadata'] = metadata
 
     return solution_data
+
+# assumes connected_components is a partition of the total variable space
+def answers_to_multisolutions(answers, connected_components, start_time, end_time, solve_ising_args=None, metadata=None):
+    solutions_by_component = [[] for cc in connected_components]
+
+    for i, solution in enumerate(answers['solutions']):
+        for cid, cc in enumerate(connected_components):
+            solutions_by_component[cid].append({
+                'energy': 0.0, # answers['energies'][i], # TODO correctly compute this
+                'num_occurrences': answers['num_occurrences'][i],
+                'solution': [solution[i] for i in cc]
+            })
+
+    solution_data_by_component = []
+
+    for cid, cc in enumerate(connected_components):
+        solution_data = {
+            'timing':answers['timing'],
+            'variable_ids':sorted(cc),
+            'solutions':solutions_by_component[cid]
+        }
+
+        solution_data['collection_start'] = start_time
+        solution_data['collection_end'] = end_time
+
+        if solve_ising_args != None:
+            solution_data['solve_ising_args'] = solve_ising_args
+
+        if metadata != None:
+            solution_data['metadata'] = metadata
+
+        #print([sol['num_occurrences'] for sol in solution_data['solutions']])
+        #combis.merge_solution_counts(solution_data) # works
+        # print([sol['num_occurrences'] for sol in solution_data['solutions']])
+        # print()
+
+        solution_data_by_component.append(solution_data)
+
+    #for cid, cs in enumerate(solution_data_by_component):
+    #    print(cid, " ", cs)
+
+    return solution_data_by_component
+
+
+def calc_connected_components(data):
+    active_bus_ids = data['variable_ids']
+
+    neighbors = {i : [] for i in active_bus_ids}
+
+    for qt in data['quadratic_terms']:
+        neighbors[qt["id_tail"]].append(qt['id_head'])
+        neighbors[qt["id_head"]].append(qt['id_tail'])
+
+    component_lookup = {i : set([i]) for i in active_bus_ids}
+    touched = set()
+
+    for i in active_bus_ids:
+        if not (i in touched):
+            _cc_dfs(i, neighbors, component_lookup, touched)
+
+    ccs = []
+    for cc in component_lookup.values():
+        if not (cc in ccs):
+            ccs.append(cc)
+
+    ccs.sort(key=lambda x: sum(x))
+
+    return ccs
+
+
+def _cc_dfs(i, neighbors, component_lookup, touched):
+    touched.add(i)
+    for j in neighbors[i]:
+        if not (j in touched):
+            for k in  component_lookup[j]:
+                component_lookup[i].add(k)
+
+            for k in component_lookup[j]:
+                component_lookup[k] = component_lookup[i]
+
+            _cc_dfs(j, neighbors, component_lookup, touched)
+
 
 
 def schedule_pair(s):
