@@ -86,6 +86,10 @@ def main(args):
         else:
             params['annealing_time'] = args.annealing_time
 
+        if args.raw_data:
+            params['answer_mode'] = 'raw'
+
+
         print_err('')
         print_err('total num reads: {}'.format(args.num_reads))
         print_err('d-wave parameters:')
@@ -102,6 +106,7 @@ def main(args):
         solutions_all = None
         iteration = 1
         retries = 0
+        sample_call = 0
         while num_reads_remaining > 0:
             try:
                 print_err('')
@@ -135,6 +140,7 @@ def main(args):
 
                     print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
                     answers = problem.result()
+                    sample_call += 1
 
                     solutions = answers_to_solutions(
                         answers,
@@ -142,7 +148,8 @@ def main(args):
                         submitted_problem['start_time'],
                         datetime.datetime.utcnow(),
                         submitted_problem['params'],
-                        solution_metadata
+                        solution_metadata,
+                        sample_call
                     )
                     solutions_list.append(solutions)
             except Exception as error:
@@ -161,7 +168,8 @@ def main(args):
                 #print_err('    num_reads_remaining = {}'.format(num_reads_remaining))
                 iteration += 1
 
-    combis.merge_solution_counts(solutions_all)
+    if not args.raw_data:
+        combis.merge_solution_counts(solutions_all)
 
     print_err('')
     total_collected = sum(solution['num_occurrences'] for solution in solutions_all['solutions'])
@@ -183,14 +191,22 @@ def main(args):
         print(json.dumps(solutions_all))
 
 
-def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
+def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None, batch=None):
     solutions = []
     for i, solution in enumerate(answers['solutions']):
-        solutions.append({
+        sol = {
             'energy': answers['energies'][i],
-            'num_occurrences': answers['num_occurrences'][i],
             'solution': [solution[i] for i in variable_ids]
-        })
+        }
+
+        if 'num_occurrences' in answers:
+            sol['num_occurrences'] = answers['num_occurrences'][i]
+        else:
+            sol['num_occurrences'] = 1
+
+        if batch != None:
+            sol['batch'] = batch
+        solutions.append(sol)
 
     solution_data = {
         'timing':answers['timing'],
@@ -238,6 +254,8 @@ def build_cli_parser():
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
     parser.add_argument('-asch', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
     parser.add_argument('-to', '--timeout', help='number of seconds to wait for response from d-wave server before raising timeout exception', type=int, default=300)
+
+    parser.add_argument('-raw', '--raw-data', help='collect sample streams rather than histograms', action='store_true', default=False)
 
     return parser
 

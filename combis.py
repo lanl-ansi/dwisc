@@ -123,6 +123,7 @@ def merge_solution_counts(solutions):
         if sol in solution_lookup:
             solution_lookup[sol]['num_occurrences'] += solution['num_occurrences']
         else:
+            solution['batch'] = 0
             solution_lookup[sol] = solution
 
     new_solutions = [sol for sol in solution_lookup.values()]
