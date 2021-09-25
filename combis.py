@@ -13,7 +13,7 @@ addative_times = [ 'total_real_time', 'post_processing_overhead_time',
 
 constant_times = [ 'anneal_time_per_run', 'readout_time_per_run',
     'qpu_readout_time_per_sample', 'qpu_delay_time_per_sample',
-    'qpu_anneal_time_per_sample'
+    'qpu_anneal_time_per_sample', 'qpu_access_overhead_time'
 ]
 
 # prints a line to standard error
@@ -80,11 +80,13 @@ def combine_solution_data(solutions_all, solutions):
         assert(solutions_all['variable_ids'][i] == solutions['variable_ids'][i])
 
     for k in addative_times:
-        solutions_all['timing'][k] = solutions_all['timing'][k] + solutions['timing'][k]
+        if k in solutions['timing']:
+            solutions_all['timing'][k] = solutions_all['timing'][k] + solutions['timing'][k]
 
     for k in constant_times:
-        if solutions_all['timing'][k] != solutions['timing'][k]:
-            solutions_all['timing'][k] = None
+        if k in solutions['timing']:
+            if solutions_all['timing'][k] != solutions['timing'][k]:
+                solutions_all['timing'][k] = None
 
     collection_start = min(solutions_all['collection_start'], solutions['collection_start'])
     collection_end   = max(solutions_all['collection_end'], solutions['collection_end'])
