@@ -23,7 +23,7 @@ def print_err(data):
 def main(args):
     file_locations = []
     for dir_name, subdir_list, file_list in os.walk(args.sample_directory):
-        for file_name in file_list:
+        for file_name in sorted(file_list):
             if file_name.endswith('.json'):
                 file_locations.append(os.path.join(dir_name, file_name))
 
@@ -53,7 +53,8 @@ def main(args):
         print_err('no results found')
         return
 
-    merge_solution_counts(solutions)
+    if not args.combine_only:
+        merge_solution_counts(solutions)
 
     print_err('')
     print_err('collection_time: {}'.format(str(solutions['collection_end']-solutions['collection_start'])))
@@ -139,6 +140,7 @@ def merge_solution_counts(solutions):
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-co', '--combine-only', help='stops the process of merging solution counts (used for raw data collection)', action='store_true')
     parser.add_argument('-sd', '--sample-directory', help='a directory of data files to operate on (.json)', required=True)
 
     return parser
