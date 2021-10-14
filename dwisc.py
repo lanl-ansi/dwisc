@@ -248,7 +248,7 @@ def build_cli_parser():
     parser.add_argument('-cnr', '--call-num-reads', help='the number of reads to request in each solve_ising call', type=int, default=10000)
 
     parser.add_argument('-nr', '--num-reads', help='the total number of reads to take', type=int, default=25000)
-    parser.add_argument('-at', '--annealing-time', help='the annealing time of each d-wave sample', type=int, default=5)
+    parser.add_argument('-at', '--annealing-time', help='the annealing time of each d-wave sample', type=float, default=5)
     parser.add_argument('-as', '--auto-scale', help='have d-wave rescale the problem', action='store_true', default=False)
     parser.add_argument('-srtr', '--spin-reversal-transform-rate', help='the number of reads to take before each spin reversal transform', type=int)
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
