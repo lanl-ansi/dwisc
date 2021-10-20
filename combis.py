@@ -53,7 +53,7 @@ def main(args):
         print_err('no results found')
         return
 
-    if not args.combine_only:
+    if not args.do_not_merge:
         merge_solution_counts(solutions)
 
     print_err('')
@@ -140,7 +140,7 @@ def merge_solution_counts(solutions):
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-co', '--combine-only', help='stops the process of merging solution counts (used for raw data collection)', action='store_true')
+    parser.add_argument('-dnm', '--do-not-merge', help='stops the process of merging solution counts (used for raw data collection)', action='store_true')
     parser.add_argument('-sd', '--sample-directory', help='a directory of data files to operate on (.json)', required=True)
 
     return parser
