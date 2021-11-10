@@ -3,6 +3,8 @@
 import sys, os, json, argparse, random, math, datetime
 
 from dwave.cloud import Client
+from dwave.system import DWaveSampler, EmbeddingComposite
+from dwave.system import TilingComposite
 
 import bqpjson
 
@@ -45,8 +47,8 @@ def main(args):
         dw_chip_id = data['metadata']['dw_chip_id']
 
     with Client.from_config(config_file=os.getenv("HOME")+"/dwave.conf", profile=args.profile, connection_close=True) as client:
+        #if tiling is present, we use a sampler rather than a solver.
         solver = client.get_solver()
-
         if not dw_chip_id is None:
             if solver.properties['chip_id'] != dw_chip_id:
                 print_err('WARNING: chip ids do not match.  data: %s  hardware: %s' % (dw_chip_id, solver.properties['chip_id']))
@@ -89,6 +91,12 @@ def main(args):
         if args.h_gain_schedule != None:
             params['h_gain_schedule'] = args.h_gain_schedule
 
+
+        sampler = None
+        if args.tiling:
+            qpu = DWaveSampler(solver=solver.properties)
+            sampler = EmbeddingComposite(TilingComposite(qpu,2,2,4))
+        
         print_err('')
         print_err('total num reads: {}'.format(args.num_reads))
         print_err('d-wave parameters:')
@@ -105,6 +113,7 @@ def main(args):
         solutions_all = None
         iteration = 1
         retries = 0
+
         while num_reads_remaining > 0:
             try:
                 print_err('')
@@ -117,12 +126,19 @@ def main(args):
                     params['num_reads'] = num_reads
 
                     print_err('    submit {} of {} remaining'.format(num_reads, num_reads_remaining-num_submitted_reads))
+                    if not args.tiling:
+                        submitted_problems.append({
+                            'problem': solver.sample_ising(h, J, **params),
+                            'start_time': datetime.datetime.utcnow(),
+                            'params': {k:v for k,v in params.items()}
+                            })
+                    else:
+                        submitted_problems.append({
+                            'problem': sampler.sample_ising(h, J, **params),
+                            'start_time': datetime.datetime.utcnow(),
+                            'params': {k:v for k,v in params.items()}
+                            })
 
-                    submitted_problems.append({
-                        'problem': solver.sample_ising(h, J, **params),
-                        'start_time': datetime.datetime.utcnow(),
-                        'params': {k:v for k,v in params.items()}
-                        })
                     num_submitted_reads += num_reads
                     if num_reads_remaining - num_submitted_reads <= 0:
                         break
@@ -132,23 +148,36 @@ def main(args):
                 solutions_list = []
                 for i, submitted_problem in enumerate(submitted_problems):
                     problem = submitted_problem['problem']
-                    if problem.wait(timeout = args.timeout) is False:
+                    if (not args.tiling) and (problem.wait(timeout = args.timeout) is False):
                         raise TimeoutError('    timed out after {} seconds while waiting for response from submitted problem'.format(args.timeout))
 
 
                     print_err('    collect {} of {} calls'.format(i+1, len(submitted_problems)))
-                    answers = problem.result()
-
-                    solutions = answers_to_solutions(
-                        answers,
-                        data['variable_ids'],
-                        submitted_problem['start_time'],
-                        datetime.datetime.utcnow(),
-                        submitted_problem['params'],
-                        solution_metadata
-                    )
+                    answers = None
+                    solutions = None
+                    if args.tiling:
+                        answers = problem
+                        solutions = samples_to_solutions(
+                            answers,
+                            data['variable_ids'],
+                            submitted_problem['start_time'],
+                            datetime.datetime.utcnow(),
+                            submitted_problem['params'],
+                            solution_metadata
+                        )
+                    else:
+                        answers = problem.result()
+                        solutions = answers_to_solutions(
+                            answers,
+                            data['variable_ids'],
+                            submitted_problem['start_time'],
+                            datetime.datetime.utcnow(),
+                            submitted_problem['params'],
+                            solution_metadata
+                        )
                     solutions_list.append(solutions)
             except Exception as error:
+                raise(error)
                 retries += 1
                 print_err(error)
                 print_err('    resubmitting round (retries: {})'.format(retries))
@@ -174,12 +203,12 @@ def main(args):
         if i >= 50:
             print_err('  first 50 of {} solutions'.format(len(solutions_all['solutions'])))
             break
-    assert(total_collected == args.num_reads)
+    assert(args.tiling or total_collected == args.num_reads)
 
     print_err('')
     solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
     solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
-
+    
     if args.pretty_print:
         print(json.dumps(solutions_all, **json_dumps_kwargs))
     else:
@@ -213,6 +242,32 @@ def answers_to_solutions(answers, variable_ids, start_time, end_time, solve_isin
     return solution_data
 
 
+def samples_to_solutions(sample_set, variable_ids, start_time, end_time, solve_ising_args=None, metadata=None):
+    solutions = []
+    for i, sample in enumerate(sample_set.record.sample):
+        solutions.append({
+            'energy': sample_set.record.energy[i],
+            'num_occurrences': int(sample_set.record.num_occurrences[i]),
+            'solution': [int(sample[j]) for j in range(len(sample))] #samples are already lists rather than tuples
+        })
+
+    solution_data = {
+        'timing':sample_set.info['timing'],
+        'variable_ids':variable_ids,
+        'solutions':solutions
+    }
+    
+    solution_data['collection_start'] = start_time
+    solution_data['collection_end'] = end_time
+    
+    if solve_ising_args != None:
+        solution_data['solve_ising_args'] = solve_ising_args
+
+    if metadata != None:
+        solution_data['metadata'] = metadata
+
+    return solution_data
+
 def schedule_pair(s):
     try:
         x, y = map(float, s.split(','))
@@ -242,6 +297,9 @@ def build_cli_parser():
     parser.add_argument('-asch', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
     parser.add_argument('-to', '--timeout', help='number of seconds to wait for response from d-wave server before raising timeout exception', type=int, default=300)
     parser.add_argument('-hgs', '--h-gain-schedule', help='an array of h gain schedule pairs', nargs='+', type=schedule_pair)
+    
+    parser.add_argument('-tile','--tiling',help='the unit cell topology to tile across the \
+            chip',action='store_true',default=False)
 
     return parser
 
