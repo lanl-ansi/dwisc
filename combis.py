@@ -13,7 +13,7 @@ addative_times = [ 'total_real_time', 'post_processing_overhead_time',
 
 constant_times = [ 'anneal_time_per_run', 'readout_time_per_run',
     'qpu_readout_time_per_sample', 'qpu_delay_time_per_sample',
-    'qpu_anneal_time_per_sample'
+    'qpu_anneal_time_per_sample', 'qpu_access_overhead_time'
 ]
 
 # prints a line to standard error
@@ -23,7 +23,7 @@ def print_err(data):
 def main(args):
     file_locations = []
     for dir_name, subdir_list, file_list in os.walk(args.sample_directory):
-        for file_name in file_list:
+        for file_name in sorted(file_list):
             if file_name.endswith('.json'):
                 file_locations.append(os.path.join(dir_name, file_name))
 
@@ -53,7 +53,8 @@ def main(args):
         print_err('no results found')
         return
 
-    merge_solution_counts(solutions)
+    if not args.do_not_merge:
+        merge_solution_counts(solutions)
 
     print_err('')
     print_err('collection_time: {}'.format(str(solutions['collection_end']-solutions['collection_start'])))
@@ -80,11 +81,13 @@ def combine_solution_data(solutions_all, solutions):
         assert(solutions_all['variable_ids'][i] == solutions['variable_ids'][i])
 
     for k in addative_times:
-        solutions_all['timing'][k] = solutions_all['timing'][k] + solutions['timing'][k]
+        if k in solutions['timing']:
+            solutions_all['timing'][k] = solutions_all['timing'][k] + solutions['timing'][k]
 
     for k in constant_times:
-        if solutions_all['timing'][k] != solutions['timing'][k]:
-            solutions_all['timing'][k] = None
+        if k in solutions['timing']:
+            if solutions_all['timing'][k] != solutions['timing'][k]:
+                solutions_all['timing'][k] = None
 
     collection_start = min(solutions_all['collection_start'], solutions['collection_start'])
     collection_end   = max(solutions_all['collection_end'], solutions['collection_end'])
@@ -123,6 +126,7 @@ def merge_solution_counts(solutions):
         if sol in solution_lookup:
             solution_lookup[sol]['num_occurrences'] += solution['num_occurrences']
         else:
+            solution['batch'] = 0
             solution_lookup[sol] = solution
 
     new_solutions = [sol for sol in solution_lookup.values()]
@@ -136,6 +140,7 @@ def merge_solution_counts(solutions):
 def build_cli_parser():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-dnm', '--do-not-merge', help='stops the process of merging solution counts (used for raw data collection)', action='store_true')
     parser.add_argument('-sd', '--sample-directory', help='a directory of data files to operate on (.json)', required=True)
 
     return parser
