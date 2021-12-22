@@ -158,6 +158,9 @@ def main(args):
             except Exception as error:
                 retries += 1
                 print_err(error)
+                if 'insufficient remaining solver access time' in error.args[0]:
+                    raise
+                    
                 print_err('    resubmitting round (retries: {})'.format(retries))
             else:
                 retries = 0
