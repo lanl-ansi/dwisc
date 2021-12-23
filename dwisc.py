@@ -85,6 +85,9 @@ def main(args):
             params['anneal_schedule'] = args.anneal_schedule
         else:
             params['annealing_time'] = args.annealing_time
+    
+        if args.h_gain_schedule != None:
+            params['h_gain_schedule'] = args.h_gain_schedule
 
         if args.raw_data:
             params['answer_mode'] = 'raw'
@@ -155,6 +158,9 @@ def main(args):
             except Exception as error:
                 retries += 1
                 print_err(error)
+                if 'insufficient remaining solver access time' in error.args[0]:
+                    raise
+                    
                 print_err('    resubmitting round (retries: {})'.format(retries))
             else:
                 retries = 0
@@ -254,6 +260,7 @@ def build_cli_parser():
     parser.add_argument('-fdc', '--flux-drift-compensation', help='enable flux drift compensation', action='store_true', default=False)
     parser.add_argument('-asch', '--anneal-schedule', help='an array of annealing schedule pairs', nargs='+', type=schedule_pair)
     parser.add_argument('-to', '--timeout', help='number of seconds to wait for response from d-wave server before raising timeout exception', type=int, default=300)
+    parser.add_argument('-hgs', '--h-gain-schedule', help='an array of h gain schedule pairs', nargs='+', type=schedule_pair)
 
     parser.add_argument('-raw', '--raw-data', help='collect sample streams rather than histograms', action='store_true', default=False)
 
