@@ -57,18 +57,20 @@ def main(args):
             'dw_chip_id': solver.properties['chip_id'],
         }
 
+        alpha = args.alpha
+
         h = {}
         for lt in data['linear_terms']:
             i = lt['id']
             assert(not i in h)
-            h[i] = lt['coeff']
+            h[i] = alpha*lt['coeff']
 
         J = {}
         for qt in data['quadratic_terms']:
             i = qt['id_tail']
             j = qt['id_head']
             assert(not (i,j) in J)
-            J[(i,j)] = qt['coeff']
+            J[(i,j)] = alpha*qt['coeff']
 
 
         params = {
@@ -94,6 +96,7 @@ def main(args):
 
 
         print_err('')
+        print_err('scale: {}'.format(args.alpha))
         print_err('total num reads: {}'.format(args.num_reads))
         print_err('d-wave parameters:')
         for k,v in params.items():
@@ -181,6 +184,7 @@ def main(args):
     total_collected = sum(solution['num_occurrences'] for solution in solutions_all['solutions'])
     print_err('total collected: {}'.format(total_collected))
     for i, solution in enumerate(solutions_all['solutions']):
+        #print_err('  %f - %d - %s' % (solution['energy'], solution['num_occurrences'], solution['solution']))
         print_err('  %f - %d' % (solution['energy'], solution['num_occurrences']))
         if i >= 50:
             print_err('  first 50 of {} solutions'.format(len(solutions_all['solutions'])))
@@ -188,6 +192,7 @@ def main(args):
     assert(total_collected == args.num_reads)
 
     print_err('')
+    solutions_all['alpha'] = alpha
     solutions_all['collection_start'] = solutions_all['collection_start'].strftime(combis.TIME_FORMAT)
     solutions_all['collection_end'] = solutions_all['collection_end'].strftime(combis.TIME_FORMAT)
 
@@ -246,6 +251,7 @@ def build_cli_parser():
     parser.add_argument('-p', '--profile', help='connection details to load from dwave.conf', default=None)
 
     parser.add_argument('-f', '--input-file', help='the data file to operate on (.json)')
+    parser.add_argument('-a', '--alpha', help='model scaling parameter', type=float, default=1.0)
     #parser.add_argument('-o', '--output-file', help='the data file to operate on (.json)')
 
     parser.add_argument('-pp', '--pretty-print', help='pretty print json output', action='store_true', default=False)
